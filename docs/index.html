@@ -1,1 +1,1037 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DMD Cloud — AI-powered CI/CD pipeline generation from git diffs using DeepSeek AI on Azure AKS." />
+  <title>DMD Cloud · AI-Powered CI/CD Generator</title>
+
+  <!-- Preconnect for performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ------------------------------------------------------------------ */
+    /* Design tokens                                                        */
+    /* ------------------------------------------------------------------ */
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-orange: #e3b341;
+      --accent-purple: #bc8cff;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --text-dim: #6e7681;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 8px 32px rgba(0,0,0,.4);
+      --font-mono: "JetBrains Mono", monospace;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Reset & Base                                                         */
+    /* ------------------------------------------------------------------ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: "Inter", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    img { max-width: 100%; display: block; }
+
+    /* ------------------------------------------------------------------ */
+    /* Layout helpers                                                       */
+    /* ------------------------------------------------------------------ */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    .section { padding: 80px 0; }
+    .section-title {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .section-subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 48px;
+    }
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .tag-blue  { background: rgba(88,166,255,.15); color: var(--accent); border: 1px solid rgba(88,166,255,.3); }
+    .tag-green { background: rgba(63,185,80,.15);  color: var(--accent-green); border: 1px solid rgba(63,185,80,.3); }
+    .tag-orange{ background: rgba(227,179,65,.15); color: var(--accent-orange); border: 1px solid rgba(227,179,65,.3);}
+    .tag-purple{ background: rgba(188,140,255,.15);color: var(--accent-purple); border: 1px solid rgba(188,140,255,.3);}
+
+    /* ------------------------------------------------------------------ */
+    /* Navigation                                                           */
+    /* ------------------------------------------------------------------ */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13,17,23,.92);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    .nav-logo {
+      font-weight: 700;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+    }
+    .nav-logo .dot { color: var(--accent-green); }
+    .nav-links { display: flex; gap: 28px; }
+    .nav-links a { color: var(--text-muted); font-size: 0.9rem; transition: color .2s; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    .nav-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      border-radius: var(--radius-sm);
+      background: var(--accent);
+      color: #0d1117;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: opacity .2s;
+    }
+    .nav-cta:hover { opacity: .88; text-decoration: none; }
+
+    /* ------------------------------------------------------------------ */
+    /* Hero                                                                 */
+    /* ------------------------------------------------------------------ */
+    .hero {
+      padding: 100px 0 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 50% 0%, rgba(88,166,255,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 30% at 80% 80%, rgba(63,185,80,.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+    }
+    .hero-badge .badge-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .4; }
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -.02em;
+      margin-bottom: 20px;
+    }
+    .hero h1 .highlight { color: var(--accent); }
+    .hero p {
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      color: var(--text-muted);
+      max-width: 580px;
+      margin: 0 auto 40px;
+    }
+    .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      padding: 12px 28px;
+      border-radius: var(--radius-sm);
+      background: var(--accent);
+      color: #0d1117;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: opacity .2s, transform .15s;
+    }
+    .btn-primary:hover { opacity: .88; transform: translateY(-1px); text-decoration: none; }
+    .btn-secondary {
+      padding: 12px 28px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 500;
+      font-size: 0.95rem;
+      background: transparent;
+      transition: border-color .2s, transform .15s;
+    }
+    .btn-secondary:hover { border-color: var(--accent); transform: translateY(-1px); text-decoration: none; }
+
+    /* ------------------------------------------------------------------ */
+    /* Architecture section                                                 */
+    /* ------------------------------------------------------------------ */
+    .arch-structured {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      display: grid;
+      gap: 24px;
+    }
+    .arch-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .arch-title-row h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0;
+    }
+    .arch-context {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .arch-flow-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+    .arch-step {
+      background: rgba(255,255,255,.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      position: relative;
+    }
+    .arch-step:last-child {
+      border-color: rgba(63,185,80,.45);
+      background: rgba(63,185,80,.08);
+    }
+    .arch-step-id {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #0d1117;
+      background: var(--accent);
+      margin-bottom: 10px;
+    }
+    .arch-flow-grid .arch-step:nth-child(1) .arch-step-id { background: var(--accent-orange); }
+    .arch-flow-grid .arch-step:nth-child(2) .arch-step-id { background: var(--accent-green); }
+    .arch-flow-grid .arch-step:nth-child(3) .arch-step-id { background: var(--accent-purple); }
+    .arch-flow-grid .arch-step:nth-child(4) .arch-step-id { background: var(--accent); }
+    .arch-step h4 {
+      margin: 0 0 6px;
+      font-size: 0.9rem;
+      line-height: 1.3;
+    }
+    .arch-step p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .arch-step::after {
+      content: "→";
+      position: absolute;
+      right: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      font-size: 0.95rem;
+    }
+    .arch-step:last-child::after { content: ""; }
+    .arch-services {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .arch-service {
+      background: rgba(255,255,255,.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+    }
+    .arch-service-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .arch-service-header strong {
+      font-size: 0.88rem;
+    }
+    .arch-service-header span {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+    }
+    .arch-service ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 6px;
+    }
+    .arch-service li {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Flow animation                                                       */
+    /* ------------------------------------------------------------------ */
+    .flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin: 40px 0;
+    }
+    .flow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      text-align: center;
+      max-width: 170px;
+    }
+    .flow-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    .flow-step-num {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #0d1117;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+    }
+    .flow-step:nth-child(1) .flow-step-num { background: var(--accent-orange); }
+    .flow-step:nth-child(3) .flow-step-num { background: var(--accent-green); }
+    .flow-step:nth-child(5) .flow-step-num { background: var(--accent-purple); }
+    .flow-step:nth-child(7) .flow-step-num { background: var(--accent); }
+    .flow-label { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
+    .flow-arrow {
+      font-size: 1.2rem;
+      color: var(--border);
+      padding: 0 4px;
+      margin-top: -20px;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Feature cards                                                        */
+    /* ------------------------------------------------------------------ */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      transition: border-color .2s, transform .2s;
+    }
+    .card:hover { border-color: rgba(88,166,255,.4); transform: translateY(-2px); }
+    .card-icon {
+      font-size: 1.8rem;
+      margin-bottom: 14px;
+    }
+    .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; }
+    .card p { font-size: 0.88rem; color: var(--text-muted); line-height: 1.65; }
+
+    /* ------------------------------------------------------------------ */
+    /* Stats bar                                                            */
+    /* ------------------------------------------------------------------ */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 2px;
+      background: var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin: 48px 0;
+    }
+    .stat {
+      background: var(--surface);
+      padding: 28px 24px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .stat-label { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; }
+
+    /* ------------------------------------------------------------------ */
+    /* Code snippet                                                         */
+    /* ------------------------------------------------------------------ */
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .code-dots { display: flex; gap: 6px; }
+    .code-dots span {
+      width: 12px; height: 12px; border-radius: 50%;
+    }
+    .code-dots .r { background: #ff5f57; }
+    .code-dots .y { background: #ffbd2e; }
+    .code-dots .g { background: #28c840; }
+    pre {
+      padding: 20px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: var(--text-muted);
+    }
+    pre .kw { color: var(--accent-purple); }
+    pre .str { color: var(--accent-green); }
+    pre .cm { color: var(--text-dim); font-style: italic; }
+    pre .fn { color: var(--accent); }
+    pre .num { color: var(--accent-orange); }
+
+    /* ------------------------------------------------------------------ */
+    /* Green IT section                                                     */
+    /* ------------------------------------------------------------------ */
+    .green-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: center;
+    }
+    .section-surface {
+      background: var(--surface);
+    }
+    .green-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .green-header .section-title {
+      margin-bottom: 0;
+    }
+    .green-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+    .green-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 0.9rem;
+    }
+    .green-list li .gi { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+    .green-list li strong { color: var(--text); display: block; margin-bottom: 2px; }
+    .green-list li span { color: var(--text-muted); }
+
+    .carbon-card {
+      background: linear-gradient(135deg, rgba(63,185,80,.1) 0%, rgba(63,185,80,.05) 100%);
+      border: 1px solid rgba(63,185,80,.25);
+      border-radius: var(--radius);
+      padding: 32px;
+    }
+    .carbon-card h3 { font-size: 1.1rem; margin-bottom: 20px; color: var(--accent-green); }
+    .carbon-metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(63,185,80,.15);
+      font-size: 0.88rem;
+    }
+    .carbon-metric:last-child { border-bottom: none; }
+    .carbon-metric .label { color: var(--text-muted); }
+    .carbon-metric .value { font-weight: 600; color: var(--accent-green); }
+    .carbon-metric-highlight {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(63,185,80,.3);
+    }
+    .carbon-metric-highlight .label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+    .carbon-metric-highlight .value {
+      font-size: 0.8rem;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Stack section                                                        */
+    /* ------------------------------------------------------------------ */
+    .stack-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .stack-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .stack-item .si { font-size: 1.1rem; }
+
+    /* ------------------------------------------------------------------ */
+    /* Footer                                                               */
+    /* ------------------------------------------------------------------ */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a { color: var(--text-dim); }
+    .footer-links a:hover { color: var(--accent); text-decoration: none; }
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .footer-brand {
+      color: var(--text);
+    }
+    .green-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--accent-green);
+      font-size: 0.8rem;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Responsive                                                           */
+    /* ------------------------------------------------------------------ */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .green-grid { grid-template-columns: 1fr; }
+      .flow-arrow { display: none; }
+      .flow { gap: 16px; }
+      .hero { padding: 60px 0 50px; }
+      .arch-flow-grid { grid-template-columns: 1fr; }
+      .arch-services { grid-template-columns: 1fr; }
+      .arch-step::after {
+        content: "↓";
+        right: 50%;
+        top: auto;
+        bottom: -14px;
+        transform: translateX(50%);
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ======================================================================
+     Navigation
+     ====================================================================== -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo">
+      <span>⬡</span> DMD<span class="dot">.</span>cloud
+    </div>
+    <div class="nav-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#green">Green IT</a>
+      <a href="#stack">Stack</a>
+      <a href="#docs">Docs</a>
+    </div>
+    <a href="https://github.com/taoufikmohamed/diff-dmd" class="nav-cta" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.73.083-.73 1.205.085 1.838 1.236 1.838 1.236 1.07 1.835 2.807 1.305 3.492.998.108-.776.418-1.305.762-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.4 3-.405 1.02.005 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12Z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<!-- ======================================================================
+     Hero
+     ====================================================================== -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Open Source · Azure · AI-Powered
+    </div>
+    <h1>
+      CI/CD pipelines generated<br />
+      <span class="highlight">automatically from your diffs</span>
+    </h1>
+    <p>
+      DMD Cloud listens to your GitHub pushes, analyzes the code diff
+      with DeepSeek AI, and writes an optimized GitHub Actions workflow —
+      no manual configuration needed.
+    </p>
+    <div class="hero-actions">
+      <a href="https://github.com/taoufikmohamed/diff-dmd" class="btn-primary" target="_blank" rel="noopener">Get started →</a>
+      <a href="#how-it-works" class="btn-secondary">See how it works</a>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value">&lt; 100ms</div>
+        <div class="stat-label">Webhook response time</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">3</div>
+        <div class="stat-label">Microservices</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">128</div>
+        <div class="stat-label">Diff cache slots</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">90%</div>
+        <div class="stat-label">Spot-node cost saving</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     How it works
+     ====================================================================== -->
+<section class="section" id="how-it-works">
+  <div class="container">
+    <h2 class="section-title">How it works</h2>
+    <p class="section-subtitle">Four clear steps from GitHub webhook to generated workflow.</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="flow-icon"><span class="flow-step-num">1</span>🎣</div>
+        <div class="flow-label">GitHub webhook event</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon"><span class="flow-step-num">2</span>🌐</div>
+        <div class="flow-label">webhook-service validates + ACKs</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon"><span class="flow-step-num">3</span>🤖</div>
+        <div class="flow-label">ai-service analyzes diff + calls DeepSeek</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon"><span class="flow-step-num">4</span>📄</div>
+        <div class="flow-label">ci-cd.yml is generated and saved</div>
+      </div>
+    </div>
+
+    <!-- Architecture diagram -->
+    <div class="arch-structured">
+      <div class="arch-title-row">
+        <h3>DMD Cloud Architecture (structured view)</h3>
+        <span class="arch-context">Azure AKS · namespace: dmd-production</span>
+      </div>
+
+      <div class="arch-flow-grid">
+        <article class="arch-step">
+          <span class="arch-step-id">1</span>
+          <h4>GitHub webhook event</h4>
+          <p><strong>POST /webhook/github</strong><br />Signed with HMAC-SHA256.</p>
+        </article>
+        <article class="arch-step">
+          <span class="arch-step-id">2</span>
+          <h4>webhook-service (port 8001)</h4>
+          <p>Validates signature, deduplicates commit SHA, and returns <strong>200 in &lt;100ms</strong>.</p>
+        </article>
+        <article class="arch-step">
+          <span class="arch-step-id">3</span>
+          <h4>ai-service (port 8000)</h4>
+          <p>Processes diff, checks SHA-256 cache, then calls DeepSeek API over HTTPS.</p>
+        </article>
+        <article class="arch-step">
+          <span class="arch-step-id">4</span>
+          <h4>Workflow output</h4>
+          <p>Generated YAML is saved to <strong>.github/workflows/ci-cd.yml</strong>.</p>
+        </article>
+      </div>
+
+      <div class="arch-services">
+        <article class="arch-service">
+          <div class="arch-service-header">
+            <strong>webhook-service</strong>
+            <span>FastAPI · Python 3.11</span>
+          </div>
+          <ul>
+            <li>Port: 8001</li>
+            <li>Autoscaling: 3 -> 10 pods (HPA)</li>
+            <li>HMAC signature verification</li>
+            <li>Deduplication cache: TTL 5 minutes</li>
+          </ul>
+        </article>
+
+        <article class="arch-service">
+          <div class="arch-service-header">
+            <strong>ai-service</strong>
+            <span>FastAPI · Python 3.11</span>
+          </div>
+          <ul>
+            <li>Port: 8000</li>
+            <li>Autoscaling: 2 -> 8 pods (HPA)</li>
+            <li>httpx keep-alive connection pool</li>
+            <li>SHA-256 diff cache: 128 slots</li>
+          </ul>
+        </article>
+
+        <article class="arch-service">
+          <div class="arch-service-header">
+            <strong>orchestrator</strong>
+            <span>Go 1.22</span>
+          </div>
+          <ul>
+            <li>Port: 8080</li>
+            <li>Graceful shutdown support</li>
+            <li>Health endpoint: /health</li>
+            <li>Metrics endpoint: /metrics</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     Features
+     ====================================================================== -->
+<section class="section section-surface" id="features">
+  <div class="container">
+    <h2 class="section-title">Features</h2>
+    <p class="section-subtitle">Built for reliability, efficiency, and security.</p>
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-icon">⚡</div>
+        <h3>Sub-100ms webhook response</h3>
+        <p>The webhook service acknowledges GitHub immediately and processes the diff in the background, well within GitHub's 30-second timeout window.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🧠</div>
+        <h3>SHA-256 diff caching</h3>
+        <p>Identical diffs never trigger a second DeepSeek API call. An in-memory LRU cache returns the cached pipeline instantly, saving cost and energy.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🔒</div>
+        <h3>HMAC-SHA256 webhook signatures</h3>
+        <p>Every incoming webhook is validated against the GitHub secret using constant-time comparison, preventing spoofed requests.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🔁</div>
+        <h3>Exponential-backoff retries</h3>
+        <p>Transient AI service failures are handled with up to 3 retries (1 s → 2 s → 4 s). A built-in fallback pipeline ensures continuity at all times.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">♻️</div>
+        <h3>Deduplication gate</h3>
+        <p>The same commit SHA is never processed twice within a 5-minute window, preventing cascading webhook retries from causing redundant AI calls.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <h3>Live health & metrics</h3>
+        <p>Every service exposes <code>/health</code>. The orchestrator also serves <code>/metrics</code> with goroutine count, heap usage, and GC cycles.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🏗️</div>
+        <h3>Horizontal Pod Autoscaling</h3>
+        <p>AI service scales 2 → 8 pods on CPU/memory pressure. Webhook service scales 3 → 10. Both scale down automatically during quiet periods.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🛡️</div>
+        <h3>Zero-privilege containers</h3>
+        <p>All containers run as UID 1000, drop ALL Linux capabilities, and forbid privilege escalation — enforced by Kubernetes security contexts.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🌍</div>
+        <h3>Green IT by design</h3>
+        <p>ARM64 nodes, spot instance pools, scale-to-zero capability, short log retention in dev, and automated weekly carbon-footprint audits.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     Green IT & FinOps
+     ====================================================================== -->
+<section class="section" id="green">
+  <div class="container">
+    <div class="green-header">
+      <h2 class="section-title">Green IT &amp; FinOps</h2>
+      <span class="tag tag-green">🌱 Sustainable</span>
+    </div>
+    <p class="section-subtitle">Every architectural decision balances performance with environmental responsibility.</p>
+
+    <div class="green-grid">
+      <ul class="green-list">
+        <li>
+          <span class="gi">🌍</span>
+          <div>
+            <strong>Sweden Central region</strong>
+            <span>Azure Sweden Central runs on ~100% renewable energy — the lowest-carbon Azure region in Europe.</span>
+          </div>
+        </li>
+        <li>
+          <span class="gi">💻</span>
+          <div>
+            <strong>ARM64 nodes (Dpsv5)</strong>
+            <span>ARM-based VMs deliver ~50% better performance-per-watt compared to equivalent x86 SKUs.</span>
+          </div>
+        </li>
+        <li>
+          <span class="gi">💰</span>
+          <div>
+            <strong>Spot node pool (scale-to-zero)</strong>
+            <span>Background workloads run on spot instances at up to 90% discount. Min replicas = 0 outside business hours.</span>
+          </div>
+        </li>
+        <li>
+          <span class="gi">🔋</span>
+          <div>
+            <strong>Diff caching reduces API calls</strong>
+            <span>An LRU cache prevents redundant DeepSeek requests for duplicate diffs, cutting AI inference energy by up to 40% on high-frequency repos.</span>
+          </div>
+        </li>
+        <li>
+          <span class="gi">🎯</span>
+          <div>
+            <strong>Path-filtered CI (only build what changed)</strong>
+            <span>GitHub Actions only builds the services with code changes, eliminating unnecessary container builds and runner minutes.</span>
+          </div>
+        </li>
+        <li>
+          <span class="gi">🗓️</span>
+          <div>
+            <strong>Weekly Green Policy workflow</strong>
+            <span>Automated audit scans for image CVEs, stale branches, and large tracked files — keeping the repo lean and secure.</span>
+          </div>
+        </li>
+        <li>
+          <span class="gi">📢</span>
+          <div>
+            <strong>Budget alerts (FinOps)</strong>
+            <span>Azure Consumption Budget alerts fire at 80% and 100% of the monthly spend threshold, preventing bill shock.</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="carbon-card">
+        <h3>📈 FinOps impact estimates</h3>
+        <div class="carbon-metric">
+          <span class="label">Spot node savings</span>
+          <span class="value">up to 90%</span>
+        </div>
+        <div class="carbon-metric">
+          <span class="label">ARM64 energy reduction</span>
+          <span class="value">~50%</span>
+        </div>
+        <div class="carbon-metric">
+          <span class="label">ACR SKU saving (dev)</span>
+          <span class="value">~60%</span>
+        </div>
+        <div class="carbon-metric">
+          <span class="label">Redundant AI calls avoided</span>
+          <span class="value">up to 40%</span>
+        </div>
+        <div class="carbon-metric">
+          <span class="label">CI minutes saved (path filter)</span>
+          <span class="value">~70%</span>
+        </div>
+        <div class="carbon-metric carbon-metric-highlight">
+          <span class="label">Region carbon intensity</span>
+          <span class="value">Sweden Central ≈ 13 gCO₂eq/kWh</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     Getting started / Quick code
+     ====================================================================== -->
+<section class="section section-surface" id="docs">
+  <div class="container">
+    <h2 class="section-title">Quick start</h2>
+    <p class="section-subtitle">Deploy DMD Cloud on your AKS cluster in minutes.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+        <span>terminal · bash</span>
+      </div>
+      <pre><span class="cm"># 1. Clone the repository</span>
+<span class="fn">git</span> clone https://github.com/taoufikmohamed/diff-dmd.git
+<span class="fn">cd</span> diff-dmd
+
+<span class="cm"># 2. Provision infrastructure (Azure AKS, ACR, Key Vault)</span>
+<span class="fn">cd</span> terraform
+<span class="fn">terraform</span> init &amp;&amp; terraform apply
+
+<span class="cm"># 3. Create the DEEPSEEK_API_KEY secret in the cluster</span>
+<span class="fn">kubectl</span> create secret generic ai-service-secrets \
+  --from-literal=DEEPSEEK_API_KEY=<span class="str">"your-key"</span> \
+  -n dmd-production
+
+<span class="cm"># 4. Deploy all services</span>
+<span class="fn">kubectl</span> apply -f k8s/production/
+
+<span class="cm"># 5. Get the public webhook URL</span>
+<span class="fn">kubectl</span> get svc webhook-service -n dmd-production
+
+<span class="cm"># 6. Register the webhook in GitHub</span>
+<span class="cm">#    Payload URL: https://&lt;your-ip&gt;:8001/webhook/github</span>
+<span class="cm">#    Content-Type: application/json</span>
+<span class="cm">#    Secret: same value as GITHUB_WEBHOOK_SECRET env var</span>
+<span class="cm">#    Events: push</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     Tech stack
+     ====================================================================== -->
+<section class="section" id="stack">
+  <div class="container">
+    <h2 class="section-title">Tech stack</h2>
+    <p class="section-subtitle">Modern, lean, and cloud-native from top to bottom.</p>
+
+    <div class="stack-list">
+      <div class="stack-item"><span class="si">🐍</span> Python 3.11</div>
+      <div class="stack-item"><span class="si">⚡</span> FastAPI</div>
+      <div class="stack-item"><span class="si">🦄</span> uvicorn + uvloop</div>
+      <div class="stack-item"><span class="si">🌐</span> httpx (async)</div>
+      <div class="stack-item"><span class="si">🐹</span> Go 1.22</div>
+      <div class="stack-item"><span class="si">🐳</span> Docker (multi-stage)</div>
+      <div class="stack-item"><span class="si">☸️</span> Kubernetes / AKS</div>
+      <div class="stack-item"><span class="si">🏗️</span> Terraform 1.5+</div>
+      <div class="stack-item"><span class="si">🤖</span> DeepSeek Coder AI</div>
+      <div class="stack-item"><span class="si">🔵</span> Azure (Sweden Central)</div>
+      <div class="stack-item"><span class="si">📦</span> GitHub Actions</div>
+      <div class="stack-item"><span class="si">🔑</span> Azure Key Vault</div>
+      <div class="stack-item"><span class="si">🛡️</span> OIDC (keyless auth)</div>
+      <div class="stack-item"><span class="si">🌱</span> ARM64 nodes</div>
+      <div class="stack-item"><span class="si">💸</span> Azure Spot instances</div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     Footer
+     ====================================================================== -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <span><strong class="footer-brand">DMD</strong> · AI-powered CI/CD generation</span>
+      <div class="green-badge">
+        🌱 Hosted on renewable energy (Sweden Central)
+      </div>
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/taoufikmohamed/diff-dmd" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/taoufikmohamed/diff-dmd/blob/master/README.md" target="_blank" rel="noopener">Docs</a>
+      <a href="https://github.com/taoufikmohamed/diff-dmd/blob/master/SECURITY.md" target="_blank" rel="noopener">Security</a>
+      <a href="https://github.com/taoufikmohamed/diff-dmd/issues" target="_blank" rel="noopener">Issues</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
